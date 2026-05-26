@@ -73,6 +73,20 @@ NEXT_PUBLIC_SUPABASE_AUTH_STORAGE=session
 - `npm run lint` - Run ESLint checks
 - `npm run preview` - Preview the production build locally
 
+## 🚀 Deployment (Vercel)
+
+The easiest way to deploy this Next.js application is through [Vercel](https://vercel.com/):
+
+1. **Push your code** to a Git repository (GitHub, GitLab, or Bitbucket).
+2. **Log in to Vercel** and click **"Add New Project"**.
+3. **Import your repository**.
+4. **Configure Environment Variables**: In the Vercel dashboard deployment settings, add the following variables (matching your `.env` file):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. **Deploy**: Click "Deploy". Vercel will automatically detect that it's a Next.js app and build it.
+
+*Note: Since Vercel automatically detects Next.js, no custom build commands are needed.*
+
 ## 🐛 Troubleshooting
 
 ### `TypeError: Failed to fetch` (Supabase)
