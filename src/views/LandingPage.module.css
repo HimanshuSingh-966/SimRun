@@ -1,0 +1,209 @@
+.container {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 5rem;
+  background: white;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-primary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoText {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--color-navy);
+}
+
+.navActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.registerBtn {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+
+.registerBtn:hover {
+  opacity: 0.8;
+}
+
+.loginBtn {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+
+.loginBtn:hover {
+  opacity: 0.8;
+}
+
+.mainContent {
+  flex: 1;
+}
+
+.heroSection {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 5.5rem 5rem 6rem;
+  background: linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%);
+  min-height: 460px;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 680px;
+}
+
+.badge {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+
+.heroTitle {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-navy);
+  margin-bottom: 1.5rem;
+}
+
+.heroSubtitle {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.featuresSection {
+  padding: 5rem;
+  background-color: #F9FAFB;
+  text-align: center;
+}
+
+.sectionHeader {
+  margin-bottom: 4rem;
+}
+
+.sectionSub {
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.sectionHeader h2 {
+  font-size: 2.25rem;
+  line-height: 1.2;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.featureCard {
+  background: white;
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+
+.featureIconWrap {
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-primary-light);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.featureCard h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.featureCard p {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* ─── Footer ─── */
+.footer {
+  background: var(--color-navy);
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 2.5rem 5rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.footerLink {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.footerLink:hover {
+  color: white;
+}
+
+.footerCopy {
+  color: rgba(255, 255, 255, 0.4);
+}

@@ -1,0 +1,456 @@
+/* ───────────────────────────────────────── */
+/* Privacy Policy Page Styles               */
+/* ───────────────────────────────────────── */
+
+.container {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Navbar (shared pattern) ─── */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 5rem;
+  background: white;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-primary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoText {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--color-navy);
+}
+
+.navActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.registerBtn {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+
+.registerBtn:hover {
+  opacity: 0.8;
+}
+
+.loginBtn {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+}
+
+.loginBtn:hover {
+  opacity: 0.8;
+}
+
+/* ─── Hero Banner ─── */
+.heroBanner {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%);
+  padding: 4.5rem 5rem 3.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.heroBanner::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: 10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.heroInner {
+  max-width: 900px;
+  position: relative;
+  z-index: 1;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+  margin-bottom: 1.25rem;
+  backdrop-filter: blur(6px);
+}
+
+.heroTitle {
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.heroSubtitle {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 620px;
+}
+
+/* ─── Content Area ─── */
+.contentArea {
+  flex: 1;
+  display: flex;
+  gap: 3rem;
+  padding: 3rem 5rem 4rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ─── Sidebar Navigation ─── */
+.sidebar {
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.sidebarTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+  padding-left: 1rem;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebarLink {
+  display: block;
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.sidebarLink:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-left-color: var(--color-primary);
+}
+
+/* ─── Main Content ─── */
+.mainContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.lastUpdated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  background: var(--color-background-gray);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 2.5rem;
+  font-weight: 500;
+}
+
+/* ─── Section Card ─── */
+.section {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem;
+  margin-bottom: 1.5rem;
+  transition: box-shadow 0.3s ease;
+  scroll-margin-top: 100px;
+}
+
+.section:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.sectionIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-primary-light);
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.sectionText {
+  font-size: 0.925rem;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+}
+
+.sectionText p {
+  margin-bottom: 1rem;
+}
+
+.sectionText p:last-child {
+  margin-bottom: 0;
+}
+
+.sectionText strong {
+  color: var(--color-navy);
+  font-weight: 600;
+}
+
+/* ─── Lists ─── */
+.policyList {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.policyListItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.925rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.listBullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  margin-top: 2px;
+}
+
+/* ─── Contact Card ─── */
+.contactCard {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-top: 1rem;
+}
+
+.contactRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  font-size: 0.9rem;
+  color: var(--color-text-main);
+}
+
+.contactRow:not(:last-child) {
+  border-bottom: 1px solid rgba(14, 165, 233, 0.1);
+}
+
+.contactLabel {
+  font-weight: 600;
+  min-width: 60px;
+}
+
+/* ─── Footer ─── */
+.footer {
+  background: var(--color-navy);
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 2.5rem 5rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.footerLink {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.footerLink:hover {
+  color: white;
+}
+
+.footerCopy {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 1.25rem 2rem;
+  }
+
+  .heroBanner {
+    padding: 3rem 2rem 2.5rem;
+  }
+
+  .heroTitle {
+    font-size: 2.25rem;
+  }
+
+  .contentArea {
+    padding: 2rem;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+  }
+
+  .sidebarNav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .sidebarLink {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .sidebarLink:hover {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-primary);
+  }
+
+  .footer {
+    padding: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbar {
+    padding: 1rem;
+  }
+
+  .heroBanner {
+    padding: 2.5rem 1.25rem 2rem;
+  }
+
+  .heroTitle {
+    font-size: 1.75rem;
+  }
+
+  .heroSubtitle {
+    font-size: 0.95rem;
+  }
+
+  .contentArea {
+    padding: 1.25rem;
+  }
+
+  .section {
+    padding: 1.5rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.15rem;
+  }
+
+  .footer {
+    padding: 1.5rem 1rem;
+  }
+
+  .footerLinks {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
