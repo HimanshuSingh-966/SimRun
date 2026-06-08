@@ -1,8 +1,10 @@
 .adminContainer {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background-color: #F8F9FA;
   font-family: var(--font-sans);
+  --color-border: #000000;
 }
 
 /* Sidebar */
@@ -90,6 +92,8 @@
   flex-direction: column;
   gap: 0.25rem;
   padding: 0 1rem;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .navItem {
@@ -522,6 +526,7 @@
 .mainContent {
   padding: 2.5rem;
   overflow-y: auto;
+  flex: 1;
 }
 
 .dashboardWrapper {

@@ -1,6 +1,8 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { sanitizeError } from '../lib/sanitizeError';
 
 export type UserRole = 'student' | 'faculty' | 'admin';
 export type UserStatus = 'pending' | 'approved' | 'rejected';
@@ -19,11 +21,11 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, metadata: {
     full_name: string;
     role: UserRole;
-  }) => Promise<{ error: string | null; userId: string | null }>;
+  }, captchaToken?: string) => Promise<{ error: string | null; userId: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -44,9 +46,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const lastFetchedIdRef = useRef<string | null>(null);
   const cachedProfileRef = useRef<Profile | null>(null);
 
-  const isTransientNetworkError = (error: any) => {
-    const msg = String(error?.message || '').toLowerCase();
-    const details = String(error?.details || '').toLowerCase();
+  const isTransientNetworkError = (error: unknown) => {
+    const msg = String((error as Error)?.message || '').toLowerCase();
+    const details = String((error as { details?: string })?.details || '').toLowerCase();
     return (
       msg.includes('failed to fetch') ||
       msg.includes('connection timeout') ||
@@ -72,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, full_name, email, role, status, avatar_url')
           .eq('id', userId)
           .single();
 
@@ -85,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           continue;
         }
 
-        console.error('Error fetching profile:', error);
+        if (process.env.NODE_ENV !== 'production') console.error('Error fetching profile:', error);
         return null;
       }
 
@@ -141,16 +143,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     cachedProfileRef.current = profile;
   }, [profile]);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: captchaToken ? { captchaToken } : undefined,
+    });
+    if (error) return { error: sanitizeError(error) };
+    
+    // Force refetch profile on explicit login attempt
+    if (data.session?.user) {
+      const p = await fetchProfile(data.session.user.id);
+      setProfile(p);
+    }
+    
     return { error: null };
   };
 
   const signUp = async (
     email: string,
     password: string,
-    metadata: { full_name: string; role: UserRole }
+    metadata: { full_name: string; role: UserRole },
+    captchaToken?: string
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -160,10 +174,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           full_name: metadata.full_name,
           role: metadata.role,
         },
+        ...(captchaToken ? { captchaToken } : {}),
       },
     });
 
-    if (error) return { error: error.message, userId: null };
+    if (error) return { error: sanitizeError(error), userId: null };
 
     const userId = data.user?.id ?? null;
 
@@ -176,9 +191,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    lastFetchedIdRef.current = null;
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') console.error("Error signing out:", err);
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      lastFetchedIdRef.current = null;
+    }
   };
 
   return (

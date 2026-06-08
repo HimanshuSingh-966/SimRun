@@ -5,16 +5,41 @@ import styles from './Admin.module.css';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 
+interface MetricItem {
+  id: string;
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ size?: number }>;
+}
+
+interface SessionItem {
+  id: string;
+  time: string;
+  title: string;
+  location: string;
+  active?: boolean;
+}
+
+interface ActivityItem {
+  id: string;
+  student: string;
+  action: string;
+  course: string;
+  time: string;
+  badge: string;
+  badgeColor: string;
+}
+
 const FacultyOverview = () => {
   const { user } = useAuth();
-  const [metrics, setMetrics] = useState<any[]>([
+  const [metrics, setMetrics] = useState<MetricItem[]>([
     { id: 'm1', label: 'TOTAL COURSES', value: '0', icon: BookOpen },
     { id: 'm2', label: 'TOTAL STUDENTS', value: '0', icon: Users },
     { id: 'm3', label: 'COMPLETION RATE', value: '0%', icon: CheckCircle },
     { id: 'm4', label: 'PENDING TASKS', value: '0', icon: AlertCircle }
   ]);
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [timeRange, setTimeRange] = useState('6m');
   const [enrollmentSeries, setEnrollmentSeries] = useState<{ label: string; value: number }[]>([]);
   /** True only after a load attempt finishes (avoids empty [] matching "all zeros" before fetch). */
@@ -69,9 +94,9 @@ const FacultyOverview = () => {
           { id: 'm3', label: 'COMPLETION RATE', value: completionRate, icon: CheckCircle },
           { id: 'm4', label: 'PENDING TASKS', value: String(active), icon: AlertCircle },
         ]);
-      } catch (error) {
-        console.error('Failed to load faculty metrics:', error);
-      }
+} catch (error) {
+  if (process.env.NODE_ENV !== 'production') console.error('Failed to load faculty metrics:', error);
+}
     };
 
     loadMetrics();
@@ -147,7 +172,7 @@ const FacultyOverview = () => {
         if (error) throw error;
 
         const counts = buckets.map((bucket) => {
-          const value = (data || []).filter((row: any) => {
+          const value = (data || []).filter((row: { enrolled_at: string }) => {
             const t = new Date(row.enrolled_at).getTime();
             return t >= bucket.start.getTime() && t <= bucket.end.getTime();
           }).length;
@@ -158,7 +183,7 @@ const FacultyOverview = () => {
           setEnrollmentSeries(counts);
         }
       } catch (e) {
-        console.error('Failed to load enrollment series:', e);
+        if (process.env.NODE_ENV !== 'production') console.error('Failed to load enrollment series:', e);
         if (!cancelled) {
           setEnrollmentSeries([]);
         }

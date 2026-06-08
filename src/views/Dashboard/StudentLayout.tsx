@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, BookOpen, ClipboardList, FolderOpen, Settings, LogOut, Menu, X, ChevronsLeft, ChevronsRight, UserCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AppBrand from '../../components/AppBrand';
+import isActiveNav from '../../lib/isActiveNav';
 import DashboardSearch from '../../components/DashboardSearch';
 import NotificationBell from '../../components/NotificationBell';
 import HelpMenu from '../../components/HelpMenu';
@@ -18,22 +19,17 @@ const StudentLayout = () => {
   const navItems = [
     { path: '/student', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
     { path: '/student/courses', icon: <BookOpen size={18} />, label: 'My Courses' },
-    { path: '/student/assignments', icon: <ClipboardList size={18} />, label: 'Assignments' },
+    { path: '/student/assignments', icon: <ClipboardList size={18} />, label: 'Assessment' },
     { path: '/student/resources', icon: <FolderOpen size={18} />, label: 'Resources' },
     { path: '/student/profile', icon: <UserCircle size={18} />, label: 'Profile' },
   ];
 
-  const isActiveNav = (itemPath: string) => {
-    if (location.pathname === itemPath) return true;
-    if (itemPath === '/student') return false;
-    return location.pathname.startsWith(`${itemPath}/`);
-  };
+  const checkActive = (itemPath: string) => isActiveNav('/student', itemPath, location.pathname);
 
   return (
     <div
       className={styles.adminContainer}
-      data-theme="student"
-      style={{ ['--color-border' as any]: '#000000' }}
+		data-theme="student"
     >
         {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
@@ -51,7 +47,7 @@ const StudentLayout = () => {
             >
               {isSidebarCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
             </button>
-            <button className={styles.mobileCloseBtn} onClick={() => setIsSidebarOpen(false)}>
+            <button className={styles.mobileCloseBtn} onClick={() => setIsSidebarOpen(false)} aria-label="Close sidebar">
               <X size={20} />
             </button>
           </div>
@@ -61,7 +57,7 @@ const StudentLayout = () => {
             <Link 
               key={item.path} 
               to={item.path}
-              className={`${styles.navItem} ${isActiveNav(item.path) ? styles.active : ''}`}
+              className={`${styles.navItem} ${checkActive(item.path) ? styles.active : ''}`}
               onClick={() => setIsSidebarOpen(false)}
             >
               {item.icon}
@@ -76,7 +72,7 @@ const StudentLayout = () => {
             <div className={styles.userInfo}>
               <span className={styles.userName}>{profile?.full_name || 'Student'}</span>
             </div>
-            <button className={styles.logoutBtn} onClick={signOut} title="Log out">
+            <button className={styles.logoutBtn} onClick={signOut} title="Log out" aria-label="Log out">
               <LogOut size={16} />
             </button>
           </div>

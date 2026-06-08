@@ -10,7 +10,9 @@ function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<R
 
   const run = async (attempt: number): Promise<Response> => {
     try {
-      const response = await fetch(input, init);
+      // Ensure we bypass aggressive browser caching that causes 304 Not Modified loops
+      const fetchInit: RequestInit = { ...init, cache: 'no-store' };
+      const response = await fetch(input, fetchInit);
 
       // Handle 429 Too Many Requests
       if (response.status === 429 && attempt < maxAttempts) {
@@ -40,14 +42,15 @@ function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<R
 }
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env');
+  if (process.env.NODE_ENV !== 'production') console.warn('Supabase credentials not found. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env');
 }
 
 /** When true (default), Supabase keeps you signed in across page reloads via browser storage — not “auto login”, but restored session. */
 const persistSession = process.env.NEXT_PUBLIC_SUPABASE_AUTH_PERSIST !== 'false';
 
-/** Use sessionStorage so the session clears when the browser tab is closed (still survives refresh in that tab). */
-const useSessionStorage = process.env.NEXT_PUBLIC_SUPABASE_AUTH_STORAGE === 'session';
+/** Use sessionStorage by default so sessions clear when the browser tab is closed (safer for shared-device LMS use).
+ *  Set NEXT_PUBLIC_SUPABASE_AUTH_STORAGE=local to revert to localStorage. */
+const useSessionStorage = process.env.NEXT_PUBLIC_SUPABASE_AUTH_STORAGE !== 'local';
 
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   global: {

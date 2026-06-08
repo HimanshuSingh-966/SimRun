@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Clock, Stethoscope, Users, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface PendingProfile {
@@ -24,12 +25,13 @@ const AdminApprovals = () => {
       const { data, error: qErr } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, status')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true });
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(200);
       if (qErr) throw qErr;
       setRows((data as PendingProfile[]) || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load approvals.');
+      setError(sanitizeError(err));
       setRows([]);
     } finally {
       setLoading(false);
@@ -41,6 +43,7 @@ const AdminApprovals = () => {
   }, []);
 
   const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
+    if (status === 'rejected' && !window.confirm('Reject this user? They will not be able to log in.')) return;
     setActionLoadingId(id);
     setError(null);
     try {
@@ -48,7 +51,7 @@ const AdminApprovals = () => {
       if (uErr) throw uErr;
       setRows((prev) => prev.filter((r) => r.id !== id));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : `Failed to mark as ${status}.`);
+      setError(sanitizeError(err));
     } finally {
       setActionLoadingId(null);
     }
@@ -96,22 +99,24 @@ const AdminApprovals = () => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => updateStatus(row.id, 'approved')}
-                    disabled={actionLoadingId === row.id}
-                    style={{ color: '#16a34a' }}
-                    title="Approve"
-                  >
-                    <Check size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateStatus(row.id, 'rejected')}
-                    disabled={actionLoadingId === row.id}
-                    style={{ color: '#dc2626' }}
-                    title="Reject"
-                  >
+        <button
+          type="button"
+          onClick={() => updateStatus(row.id, 'approved')}
+          disabled={actionLoadingId === row.id}
+          style={{ color: '#16a34a' }}
+          title="Approve"
+          aria-label="Approve user"
+        >
+          <Check size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => updateStatus(row.id, 'rejected')}
+          disabled={actionLoadingId === row.id}
+          style={{ color: '#dc2626' }}
+          title="Reject"
+          aria-label="Reject user"
+        >
                     <X size={16} />
                   </button>
                 </div>

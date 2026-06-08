@@ -1,16 +1,26 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, UserCircle, Briefcase, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
+import { createRateLimiter } from '../../lib/rateLimit';
+import Turnstile, { type TurnstileRef } from '../../components/Turnstile';
 import styles from './AuthForms.module.css';
+
+const signupLimiter = createRateLimiter(5, 15 * 60 * 1000); // 5 per 15 min
 
 const FacultyRegistration = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, signOut } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileRef>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+  const handleCaptchaVerify = useCallback((token: string) => setCaptchaToken(token), []);
+  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -29,18 +39,35 @@ const FacultyRegistration = () => {
       setError('Passwords do not match.');
       return;
     }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    if (!signupLimiter.check()) {
+      setError('Too many registration attempts. Please wait a few minutes.');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Please complete the CAPTCHA verification.');
+      return;
+    }
 
     setLoading(true);
 
     const { error: signUpError, userId } = await signUp(
       formData.email,
       formData.password,
-      { full_name: formData.fullName, role: 'faculty' }
+      { full_name: formData.fullName, role: 'faculty' },
+      captchaToken
     );
 
     if (signUpError) {
       setError(signUpError);
       setLoading(false);
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
       return;
     }
 
@@ -54,13 +81,19 @@ const FacultyRegistration = () => {
       });
 
 		if (facultyError) {
+			await signOut();
 			setError(facultyError.code === '23505'
 				? 'A faculty profile for this account already exists. Please contact your administrator.'
-				: `Failed to create faculty profile: ${facultyError.message}`);
+				: `Failed to create faculty profile: ${sanitizeError(facultyError)} Please try registering again.`);
 			setLoading(false);
+			setCaptchaToken(null);
+			turnstileRef.current?.reset();
 			return;
 		}
 	}
+
+	// Sign out immediately so the user isn't stuck logged in with a pending profile
+	await signOut();
 
 	setLoading(false);
 	setSuccess(true);
@@ -179,7 +212,20 @@ const FacultyRegistration = () => {
           </div>
         </div>
 
-        <button type="submit" className={styles.submitBtn} disabled={loading}>
+        {turnstileSiteKey && (
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={turnstileSiteKey}
+            onVerify={handleCaptchaVerify}
+            onExpire={handleCaptchaExpire}
+            onError={() => {
+              setCaptchaToken(null);
+              setError('CAPTCHA could not be loaded. Please refresh and try again.');
+            }}
+          />
+        )}
+
+        <button type="submit" className={styles.submitBtn} disabled={loading || !captchaToken}>
           {loading ? 'Registering...' : 'Register Account'} <ArrowRight size={18} />
         </button>
       </form>

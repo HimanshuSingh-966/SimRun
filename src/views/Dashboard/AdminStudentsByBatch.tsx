@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface StudentProfile {
@@ -41,22 +42,36 @@ const AdminStudentsByBatch = () => {
           setBatchLabel('Unassigned');
         }
 
+      let filteredIds: string[] | null = null;
+
+      if (batchId === 'unassigned') {
+        const { data: spData } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .is('batch_id', null);
+      filteredIds = (spData || []).map((r: { id: string }) => r.id);
+    } else {
+      const { data: spData } = await supabase
+        .from('student_profiles')
+        .select('id')
+        .eq('batch_id', batchId);
+      filteredIds = (spData || []).map((r: { id: string }) => r.id);
+      }
+
+      if (filteredIds.length === 0) {
+        if (!cancelled) setRows([]);
+        } else {
         const { data, error: qErr } = await supabase
           .from('profiles')
           .select('id, full_name, email, status, student_profiles(reg_number, batch_id, semester)')
-          .eq('role', 'student')
-          .order('created_at', { ascending: false });
+          .in('id', filteredIds)
+          .order('created_at', { ascending: false })
+          .limit(500);
         if (qErr) throw qErr;
-
-        const allRows = (data as StudentRow[]) || [];
-        const filtered = allRows.filter((row) => {
-          const sp = Array.isArray(row.student_profiles) ? row.student_profiles[0] : row.student_profiles;
-          const bId = sp?.batch_id || 'unassigned';
-          return bId === batchId;
-        });
-        if (!cancelled) setRows(filtered);
+        if (!cancelled) setRows((data as StudentRow[]) || []);
+      }
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load students.');
+        if (!cancelled) setError(sanitizeError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }

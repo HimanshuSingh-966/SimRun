@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface NotificationRow {
@@ -28,6 +29,7 @@ const NotificationsPage = () => {
 
   useEffect(() => {
     if (!user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRows([]);
       setLoading(false);
       return;
@@ -44,7 +46,7 @@ const NotificationsPage = () => {
         .limit(200);
       if (cancelled) return;
       if (qErr) {
-        setError(qErr.message);
+        setError(sanitizeError(qErr));
       } else {
         setRows((data as NotificationRow[]) || []);
       }
@@ -57,13 +59,17 @@ const NotificationsPage = () => {
 
   const markAllRead = async () => {
     if (!user?.id) return;
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
-    setRows((prev) => prev.map((r) => ({ ...r, is_read: true })));
+    const prev = [...rows];
+    setRows((r) => r.map((n) => ({ ...n, is_read: true })));
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+    if (error) setRows(prev);
   };
 
   const markOneRead = async (id: string) => {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_read: true } : r)));
+    const prev = [...rows];
+    setRows((r) => r.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    if (error) setRows(prev);
   };
 
   return (
@@ -71,7 +77,7 @@ const NotificationsPage = () => {
       <div className={styles.approvalsCard}>
         <div className={styles.approvalsHeader}>
           <h3>Notifications</h3>
-          <button type="button" onClick={markAllRead} className={styles.downloadBtn}>
+          <button type="button" onClick={markAllRead} className={styles.downloadBtn} aria-label="Mark all notifications as read">
             Mark all read
           </button>
         </div>
@@ -108,7 +114,7 @@ const NotificationsPage = () => {
                       Mark read
                     </button>
                   )}
-                  {n.link_url && (
+                  {n.link_url && n.link_url.startsWith('/') && (
                     <Link to={n.link_url} style={{ color: 'var(--theme-primary)', fontWeight: 600, fontSize: '0.875rem' }}>
                       Open →
                     </Link>

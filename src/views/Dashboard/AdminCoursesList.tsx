@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { formatDdMmYyyy } from '../../lib/formatDate';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface CourseRow {
@@ -71,8 +72,7 @@ const AdminCoursesList = () => {
         }
       } catch (e: unknown) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : 'Failed to load courses.';
-          setError(msg);
+          setError(sanitizeError(e));
           setCourses([]);
         }
       } finally {
@@ -90,8 +90,25 @@ const AdminCoursesList = () => {
   return (
     <div className={styles.dashboardWrapper}>
       <div className={styles.approvalsCard}>
-        <div className={styles.approvalsHeader}>
+        <div className={styles.approvalsHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>Course registry</h3>
+          <Link
+            to="/admin/courses/new"
+            style={{
+              padding: '0.5rem 1rem',
+              background: 'var(--theme-primary)',
+              color: 'white',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            Create Course
+          </Link>
         </div>
 
         {error && (
@@ -149,7 +166,7 @@ const AdminCoursesList = () => {
                         {c.created_at && <span>Created: {formatDdMmYyyy(c.created_at)}</span>}
                       </div>
                       <Link
-                        to={`/admin/courses/${c.id}/view`}
+                        to={`/admin/courses/${c.id}/manage`}
                         style={{
                           display: 'inline-block',
                           marginTop: '0.75rem',
@@ -158,7 +175,7 @@ const AdminCoursesList = () => {
                           color: 'var(--theme-primary)',
                         }}
                       >
-                        View materials & assignments →
+                        Manage course (materials, assignments, students, contributors) →
                       </Link>
                     </div>
                   </div>

@@ -37,6 +37,7 @@ export default function NotificationBell({ basePath }: { basePath: '/student' | 
 
   useEffect(() => {
     if (!user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRows([]);
       return;
     }
@@ -87,13 +88,17 @@ export default function NotificationBell({ basePath }: { basePath: '/student' | 
 
   const markAllRead = async () => {
     if (!user?.id || unread === 0) return;
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
-    setRows((prev) => prev.map((r) => ({ ...r, is_read: true })));
+    const prev = [...rows];
+    setRows((r) => r.map((n) => ({ ...n, is_read: true })));
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+    if (error) setRows(prev);
   };
 
   const markOneRead = async (id: string) => {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_read: true } : r)));
+    const prev = [...rows];
+    setRows((r) => r.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    if (error) setRows(prev);
   };
 
   return (
@@ -117,7 +122,7 @@ export default function NotificationBell({ basePath }: { basePath: '/student' | 
               rows.map((n) => (
                 <Link
                   key={n.id}
-                  to={n.link_url || `${basePath}/notifications`}
+                  to={(n.link_url && n.link_url.startsWith('/')) ? n.link_url : `${basePath}/notifications`}
                   className={styles.notificationItem}
                   onClick={() => {
                     if (!n.is_read) void markOneRead(n.id);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 const AdminProfile = () => {
@@ -34,7 +35,7 @@ const AdminProfile = () => {
       if (pErr) throw pErr;
       setMsg('Profile updated successfully.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile.');
+      setError(sanitizeError(err));
     } finally {
       setSaving(false);
     }
@@ -54,7 +55,7 @@ const AdminProfile = () => {
       setConfirmPassword('');
       setMsg('Password changed successfully.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to change password.');
+      setError(sanitizeError(err));
     } finally {
       setUpdatingPassword(false);
     }

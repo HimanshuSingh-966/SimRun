@@ -1,23 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, UserCircle, GraduationCap, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
+import { createRateLimiter } from '../../lib/rateLimit';
+import Turnstile, { type TurnstileRef } from '../../components/Turnstile';
 import styles from './AuthForms.module.css';
 
+const signupLimiter = createRateLimiter(5, 15 * 60 * 1000); // 5 per 15 min
+
 const fetchBatches = async () => {
-  const { data, error } = await supabase.from('batches').select('*').order('name');
-  if (error) return [];
+  const { data, error } = await supabase.from('batches').select('id, name, start_year, end_year').order('name').limit(200);
+  if (error) throw error;
   return data ?? [];
 };
 
 const StudentRegistration = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, signOut } = useAuth();
   const [batches, setBatches] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileRef>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+  const handleCaptchaVerify = useCallback((token: string) => setCaptchaToken(token), []);
+  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -31,7 +41,7 @@ const StudentRegistration = () => {
   });
 
   useEffect(() => {
-    fetchBatches().then(setBatches);
+    fetchBatches().then(setBatches).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,18 +52,35 @@ const StudentRegistration = () => {
       setError('Passwords do not match.');
       return;
     }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    if (!signupLimiter.check()) {
+      setError('Too many registration attempts. Please wait a few minutes.');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Please complete the CAPTCHA verification.');
+      return;
+    }
 
     setLoading(true);
 
     const { error: signUpError, userId } = await signUp(
       formData.email,
       formData.password,
-      { full_name: formData.fullName, role: 'student' }
+      { full_name: formData.fullName, role: 'student' },
+      captchaToken
     );
 
     if (signUpError) {
       setError(signUpError);
       setLoading(false);
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
       return;
     }
 
@@ -69,13 +96,19 @@ const StudentRegistration = () => {
       });
 
 		if (studentError) {
+			await signOut();
 			setError(studentError.code === '23505'
 				? 'A student profile for this account already exists. Please contact your coordinator.'
-				: `Failed to create student profile: ${studentError.message}`);
+				: `Failed to create student profile: ${sanitizeError(studentError)} Please try registering again.`);
 			setLoading(false);
+			setCaptchaToken(null);
+			turnstileRef.current?.reset();
 			return;
 		}
 	}
+
+	// Sign out immediately so the user isn't stuck logged in with a pending profile
+	await signOut();
 
 	setLoading(false);
 	setSuccess(true);
@@ -205,12 +238,25 @@ const StudentRegistration = () => {
           </div>
         </div>
 
-        <button type="submit" className={styles.submitBtn} disabled={loading}>
+        {turnstileSiteKey && (
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={turnstileSiteKey}
+            onVerify={handleCaptchaVerify}
+            onExpire={handleCaptchaExpire}
+            onError={() => {
+              setCaptchaToken(null);
+              setError('CAPTCHA could not be loaded. Please refresh and try again.');
+            }}
+          />
+        )}
+
+        <button type="submit" className={styles.submitBtn} disabled={loading || !captchaToken}>
           {loading ? 'Registering...' : 'Register Account'} <ArrowRight size={18} />
         </button>
 
         <div className={styles.termsFooter}>
-          By registering, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+          By registering, you agree to our <Link to="/privacy-policy">Privacy Policy</Link>.
         </div>
       </form>
     </div>

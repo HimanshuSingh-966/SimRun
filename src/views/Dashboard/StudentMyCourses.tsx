@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BookOpen, LogOut } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface CourseInfo {
@@ -18,7 +19,7 @@ interface EnrollmentRow {
   status: string | null;
   progress: number | null;
   enrolled_at: string | null;
-  courses: CourseInfo | null;
+  courses: CourseInfo[] | null;
 }
 
 const StudentMyCourses = () => {
@@ -64,16 +65,17 @@ const StudentMyCourses = () => {
             )
           `
           )
-          .eq('student_id', userId)
-          .order('enrolled_at', { ascending: false });
+      .eq('student_id', userId)
+      .order('enrolled_at', { ascending: false })
+      .limit(200);
 
         if (qErr) throw qErr;
         if (!cancelled) {
-          setRows((data as unknown as EnrollmentRow[]) || []);
+          setRows((data as EnrollmentRow[]) || []);
         }
       } catch (e: unknown) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : 'Failed to load enrollments.';
+          const msg = sanitizeError(e);
           setError(msg);
           setRows([]);
         }
@@ -91,6 +93,7 @@ const StudentMyCourses = () => {
 
   const unenrollCourse = async (enrollmentId: string) => {
     if (!userId) return;
+    if (!window.confirm('Are you sure you want to drop this course? This action cannot be undone.')) return;
     setUnenrollingId(enrollmentId);
     try {
       const { error: delErr } = await supabase
@@ -101,7 +104,7 @@ const StudentMyCourses = () => {
       if (delErr) throw delErr;
       setRows((prev) => prev.filter((r) => r.id !== enrollmentId));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to drop course.');
+      setError(sanitizeError(e));
     } finally {
       setUnenrollingId(null);
     }
@@ -127,7 +130,7 @@ const StudentMyCourses = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {rows.map((row) => {
-              const c = row.courses;
+              const c = row.courses?.[0];
               if (!c) return null;
               return (
                 <div
@@ -184,11 +187,12 @@ const StudentMyCourses = () => {
                           Open course content →
                         </Link>
                         {row.status === 'active' && (
-                          <button
-                            type="button"
-                            onClick={() => unenrollCourse(row.id)}
-                            disabled={unenrollingId === row.id}
-                            style={{
+        <button
+          type="button"
+          onClick={() => unenrollCourse(row.id)}
+          disabled={unenrollingId === row.id}
+          aria-label={`Drop course ${row.courses?.[0]?.title || ''}`}
+          style={{
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.3rem',

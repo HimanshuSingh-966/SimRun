@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { LayoutDashboard, Clock, FileText, Users, BookOpen, LogOut, Menu, X, ChevronsLeft, ChevronsRight, UserCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AppBrand from '../../components/AppBrand';
+import isActiveNav from '../../lib/isActiveNav';
 import DashboardSearch from '../../components/DashboardSearch';
 import NotificationBell from '../../components/NotificationBell';
 import HelpMenu from '../../components/HelpMenu';
@@ -23,17 +24,12 @@ const AdminLayout = () => {
     { path: '/admin/profile', icon: <UserCircle size={18} />, label: 'Profile' },
   ];
 
-  const isActiveNav = (itemPath: string) => {
-    if (location.pathname === itemPath) return true;
-    if (itemPath === '/admin') return false;
-    return location.pathname.startsWith(`${itemPath}/`);
-  };
+  const checkActive = (itemPath: string) => isActiveNav('/admin', itemPath, location.pathname);
 
   return (
     <div
       className={styles.adminContainer}
-      data-theme="admin"
-      style={{ ['--color-border' as any]: '#000000' }}
+		data-theme="admin"
     >
         {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
@@ -51,7 +47,7 @@ const AdminLayout = () => {
             >
               {isSidebarCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
             </button>
-            <button className={styles.mobileCloseBtn} onClick={() => setIsSidebarOpen(false)}>
+            <button className={styles.mobileCloseBtn} onClick={() => setIsSidebarOpen(false)} aria-label="Close sidebar">
               <X size={20} />
             </button>
           </div>
@@ -61,7 +57,7 @@ const AdminLayout = () => {
             <Link 
               key={item.path} 
               to={item.path}
-              className={`${styles.navItem} ${isActiveNav(item.path) ? styles.active : ''}`}
+              className={`${styles.navItem} ${checkActive(item.path) ? styles.active : ''}`}
               onClick={() => setIsSidebarOpen(false)}
             >
               {item.icon}
@@ -77,7 +73,7 @@ const AdminLayout = () => {
               <span className={styles.userName}>{profile?.full_name || 'System Admin'}</span>
               <span className={styles.userRole}>System Admin</span>
             </div>
-            <button className={styles.logoutBtn} onClick={signOut} title="Log out">
+            <button className={styles.logoutBtn} onClick={signOut} title="Log out" aria-label="Log out">
               <LogOut size={16} />
             </button>
           </div>

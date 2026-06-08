@@ -3,6 +3,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './views/LandingPage';
 import Login from './views/Auth/Login';
 import RoleSelection from './views/Auth/RoleSelection';
@@ -34,6 +35,7 @@ import StudentAssignments from './views/Dashboard/StudentAssignments';
 import StudentResources from './views/Dashboard/StudentResources';
 import AdminProfile from './views/Dashboard/AdminProfile';
 import AdminCoursesList from './views/Dashboard/AdminCoursesList';
+import AdminCreateCourse from './views/Dashboard/AdminCreateCourse';
 import AdminCoursePreview from './views/Dashboard/AdminCoursePreview';
 import NotificationsPage from './views/Dashboard/NotificationsPage';
 import HelpPage from './views/Dashboard/HelpPage';
@@ -49,9 +51,10 @@ function DashboardRedirect() {
 
 function App() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
+    <AuthProvider>
+      <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
@@ -74,7 +77,9 @@ function App() {
             <Route path="faculty" element={<AdminFacultyManagement />} />
             <Route path="students" element={<AdminStudentManagement />} />
             <Route path="students/:batchId" element={<AdminStudentsByBatch />} />
+            <Route path="courses/new" element={<AdminCreateCourse />} />
             <Route path="courses/:courseId/view" element={<AdminCoursePreview />} />
+            <Route path="courses/:courseId/manage" element={<FacultyCourseContent />} />
       <Route path="courses" element={<AdminCoursesList />} />
       <Route path="profile" element={<AdminProfile />} />
       <Route path="notifications" element={<NotificationsPage />} />
@@ -118,9 +123,10 @@ function App() {
 
           {/* Catch all */}
           <Route path="*" element={<DashboardRedirect />} />
-        </Routes>
-      </AuthProvider>
+    </Routes>
+    </AuthProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

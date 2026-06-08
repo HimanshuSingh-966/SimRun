@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface StudentProfileRow {
@@ -61,7 +62,7 @@ const StudentProfile = () => {
     (async () => {
       const [{ data: batchData }, { data, error: spErr }] = await Promise.all([
         supabase.from('batches').select('id, name, year').order('name'),
-        supabase.from('student_profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('student_profiles').select('id, reg_number, batch_id, semester, faculty, department, course, specialization').eq('id', user.id).maybeSingle(),
       ]);
 
       if (cancelled) return;
@@ -69,7 +70,7 @@ const StudentProfile = () => {
       setBatches(((batchData as BatchRow[]) || []).map((b) => ({ id: b.id, name: b.name, year: b.year })));
 
       if (spErr) {
-        setError(spErr.message);
+        setError(sanitizeError(spErr));
       } else if (data) {
         const sp = data as StudentProfileRow;
         setRegNumber(sp.reg_number || '');
@@ -86,6 +87,7 @@ const StudentProfile = () => {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, profile?.full_name, user?.id]);
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -119,11 +121,14 @@ const StudentProfile = () => {
 
       setMsg('Profile updated successfully.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile.');
+      setError(sanitizeError(err));
     } finally {
       setSaving(false);
     }
   };
+
+  const ALLOWED_AVATAR_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+  const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2 MB
 
   const uploadAvatar = async (file: File) => {
     if (!user?.id) return;
@@ -131,14 +136,23 @@ const StudentProfile = () => {
     setError(null);
     setMsg(null);
     try {
+      // Validate MIME type
+      if (!ALLOWED_AVATAR_MIMES.has(file.type)) {
+        throw new Error(`Only image files (JPG, PNG, WebP, GIF) are allowed for avatars.`);
+      }
+      // Validate size
+      if (file.size > MAX_AVATAR_SIZE) {
+        throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 2 MB.`);
+      }
+
       const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
       const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `student-avatars/${user.id}/${Date.now()}_${safe}.${ext}`;
+      const path = `${user.id}/${Date.now()}_${safe}.${ext}`;
       const { error: uploadError } = await supabase.storage
-        .from('course-material-files')
+        .from('avatars')
         .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
       if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('course-material-files').getPublicUrl(path);
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const publicUrl = data.publicUrl;
       const { error: profileErr } = await supabase
         .from('profiles')
@@ -148,7 +162,7 @@ const StudentProfile = () => {
       setAvatarUrl(publicUrl);
       setMsg('Profile image updated.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image.');
+      setError(sanitizeError(err));
     } finally {
       setUploadingAvatar(false);
     }
@@ -176,7 +190,7 @@ const StudentProfile = () => {
       setConfirmPassword('');
       setMsg('Password changed successfully.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to change password.');
+      setError(sanitizeError(err));
     } finally {
       setUpdatingPassword(false);
     }

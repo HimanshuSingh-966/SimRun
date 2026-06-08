@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+
 import type { UserRole } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { profile, loading, session } = useAuth();
+  const { profile, loading, session, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -110,7 +110,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
           Your registration was not approved by the administrator. If you believe this is an error, please contact your clinical coordinator for assistance.
         </p>
         <button
-          onClick={() => { supabase.auth.signOut(); }}
+          onClick={() => { signOut(); }}
           style={{
             marginTop: '0.5rem',
             padding: '0.65rem 1.5rem',

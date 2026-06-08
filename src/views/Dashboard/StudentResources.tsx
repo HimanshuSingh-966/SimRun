@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+
 import { BookOpen, FileText, Video, Headphones, ExternalLink, Download } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
+
+const srOnlyStyle: React.CSSProperties = { position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 };
 
 interface MaterialRow {
   id: string;
@@ -47,7 +50,7 @@ const StudentResources = () => {
           .eq('student_id', user.id)
           .eq('status', 'active');
         if (eErr) throw eErr;
-        const courseIds = (enrollments || []).map((e: any) => e.course_id).filter(Boolean);
+        const courseIds = (enrollments || []).map((e: { course_id: string }) => e.course_id).filter(Boolean);
         if (courseIds.length === 0) {
           if (!cancelled) { setMaterials([]); setLoading(false); }
           return;
@@ -56,7 +59,7 @@ const StudentResources = () => {
           .from('courses')
           .select('id, title')
           .in('id', courseIds);
-        const courseMap = new Map<string, string>((coursesData || []).map((c: any) => [c.id, c.title]));
+        const courseMap = new Map<string, string>((coursesData || []).map((c: { id: string; title: string }) => [c.id, c.title]));
 
         const { data: matData, error: mErr } = await supabase
           .from('course_materials')
@@ -64,13 +67,13 @@ const StudentResources = () => {
           .in('course_id', courseIds)
           .order('week_number', { ascending: true });
         if (mErr) throw mErr;
-        const enriched = (matData || []).map((m: any) => ({
-          ...m,
-          course_title: courseMap.get(m.course_id) || 'Unknown Course',
-        }));
+    const enriched = ((matData || []) as MaterialRow[]).map((m) => ({
+      ...m,
+      course_title: courseMap.get(m.course_id) || 'Unknown Course',
+    }));
         if (!cancelled) setMaterials(enriched);
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load resources.');
+        if (!cancelled) setError(sanitizeError(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -122,14 +125,14 @@ const StudentResources = () => {
                     <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>Week {m.week_number || 1}</div>
                     <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                       {m.external_url && (
-                        <a href={m.external_url} target="_blank" rel="noreferrer" style={{ color: 'var(--theme-primary)', fontWeight: 600, fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <ExternalLink size={14} /> Open Link
-                        </a>
-                      )}
-                      {m.file_url && (
-                        <a href={m.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--theme-primary)', fontWeight: 600, fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Download size={14} /> {m.file_name || 'Download File'}
-                        </a>
+    <a href={m.external_url} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--theme-primary)', fontWeight: 600, fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+      <ExternalLink size={14} /> Open Link<span style={srOnlyStyle}>(opens in new window)</span>
+    </a>
+  )}
+  {m.file_url && (
+    <a href={m.file_url} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--theme-primary)', fontWeight: 600, fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+      <Download size={14} /> {m.file_name || 'Download File'}<span style={srOnlyStyle}>(opens in new window)</span>
+    </a>
                       )}
                     </div>
                   </div>

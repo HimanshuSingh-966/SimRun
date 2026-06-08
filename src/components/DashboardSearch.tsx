@@ -52,7 +52,7 @@ export default function DashboardSearch({
           .order('created_at', { ascending: false })
           .limit(160);
         if (cancelled) return;
-        const mapped: SearchItem[] = (((courses as any[]) || []).map((c) => ({
+        const mapped: SearchItem[] = (((courses as { id: string; title: string }[]) || []).map((c) => ({
           id: `course-${c.id}`,
           title: c.title || 'Untitled course',
           subtitle: 'Course content',
@@ -71,8 +71,8 @@ export default function DashboardSearch({
         .limit(160);
       if (cancelled) return;
       const seen = new Set<string>();
-      const mapped: SearchItem[] = [];
-      for (const row of (enrollments as any[]) || []) {
+    const mapped: SearchItem[] = [];
+    for (const row of (enrollments as unknown as { course_id: string; courses: { id: string; title: string } }[]) || []) {
         const c = row?.courses;
         if (!c?.id || seen.has(c.id)) continue;
         seen.add(c.id);
@@ -107,36 +107,36 @@ export default function DashboardSearch({
         supabase.from('profiles').select('id, full_name, email').eq('role', 'faculty').or(`full_name.ilike.${like},email.ilike.${like}`).limit(10),
       ]);
 
-      const studentIds = ((students as any[]) || []).map((s: any) => s.id);
-      const facultyIds = ((faculty as any[]) || []).map((f: any) => f.id);
+      const studentIds = ((students as { id: string; full_name: string | null; email: string | null }[]) || []).map((s) => s.id);
+      const facultyIds = ((faculty as { id: string; full_name: string | null; email: string | null }[]) || []).map((f) => f.id);
       const regById = new Map<string, string>();
       const empById = new Map<string, string>();
 
       if (studentIds.length > 0) {
         const { data: spData } = await supabase.from('student_profiles').select('id, reg_number').in('id', studentIds);
-        ((spData as any[]) || []).forEach((row: any) => { if (row?.id && row?.reg_number) regById.set(String(row.id), String(row.reg_number)); });
+        ((spData as { id: string; reg_number: string | null }[]) || []).forEach((row) => { if (row?.id && row?.reg_number) regById.set(String(row.id), String(row.reg_number)); });
       }
       if (facultyIds.length > 0) {
         const { data: fpData } = await supabase.from('faculty_profiles').select('id, employee_id').in('id', facultyIds);
-        ((fpData as any[]) || []).forEach((row: any) => { if (row?.id && row?.employee_id) empById.set(String(row.id), String(row.employee_id)); });
+        ((fpData as { id: string; employee_id: string | null }[]) || []).forEach((row) => { if (row?.id && row?.employee_id) empById.set(String(row.id), String(row.employee_id)); });
       }
 
       const mapped: SearchItem[] = [
-        ...((courses as any[]) || []).map((c) => ({
+        ...((courses as { id: string; title: string }[]) || []).map((c) => ({
           id: `course-${c.id}`,
           title: c.title || 'Untitled course',
           subtitle: 'Course',
           link: '/admin/courses',
           keywords: `${c.title || ''} course`,
         })),
-        ...((students as any[]) || []).map((s) => ({
+        ...((students as { id: string; full_name: string | null; email: string | null }[]) || []).map((s) => ({
           id: `student-${s.id}`,
           title: s.full_name || (s.email ? String(s.email).split('@')[0] : 'Student'),
           subtitle: `Student${regById.get(String(s.id)) ? ` - Reg ${regById.get(String(s.id))}` : s.email ? ` - ${s.email}` : ''}`,
           link: '/admin/students',
           keywords: `${s.full_name || ''} ${s.email || ''} ${regById.get(String(s.id)) || ''} student registration`,
         })),
-        ...((faculty as any[]) || []).map((f) => ({
+        ...((faculty as { id: string; full_name: string | null; email: string | null }[]) || []).map((f) => ({
           id: `faculty-${f.id}`,
           title: f.full_name || (f.email ? String(f.email).split('@')[0] : 'Faculty'),
           subtitle: `Faculty${empById.get(String(f.id)) ? ` - Employee ${empById.get(String(f.id))}` : f.email ? ` - ${f.email}` : ''}`,
@@ -184,26 +184,30 @@ export default function DashboardSearch({
 
   return (
     <div className={styles.searchBar} ref={rootRef}>
-      <Search size={16} className={styles.searchIcon} />
-      <input
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') setOpen(false);
-          if (e.key === 'Enter' && filtered[0]) {
-            e.preventDefault();
-            navigate(filtered[0].link);
-            setOpen(false);
-          }
-        }}
-        placeholder={placeholder}
-      />
+        <Search size={16} className={styles.searchIcon} />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setOpen(false);
+            if (e.key === 'Enter' && filtered[0]) {
+              e.preventDefault();
+              navigate(filtered[0].link);
+              setOpen(false);
+            }
+          }}
+          placeholder={placeholder}
+          aria-label={placeholder}
+          role="combobox"
+          aria-expanded={open && query.trim().length >= (role === 'admin' ? 2 : 1)}
+          aria-autocomplete="list"
+        />
       {open && query.trim().length >= (role === 'admin' ? 2 : 1) && (
-        <div className={styles.searchDropdown}>
+        <div className={styles.searchDropdown} role="listbox">
           {adminSearching ? (
             <p className={styles.searchEmpty}>Searching...</p>
           ) : filtered.length === 0 ? (

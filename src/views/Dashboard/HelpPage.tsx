@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
+import { createRateLimiter } from '../../lib/rateLimit';
 import styles from './Admin.module.css';
+
+const ticketLimiter = createRateLimiter(5, 10 * 60 * 1000); // 5 per 10 min
 
 type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
@@ -51,7 +55,7 @@ const HelpPage = () => {
         .order('created_at', { ascending: false })
         .limit(200);
       if (cancelled) return;
-      if (error) setErr(error.message);
+      if (error) setErr(sanitizeError(error));
       setTickets((data as TicketRow[]) || []);
       setLoadingTickets(false);
     })();
@@ -68,6 +72,11 @@ const HelpPage = () => {
     if (!(profile.role === 'student' || profile.role === 'faculty')) return;
     if (!subject.trim() || !message.trim()) return;
 
+    if (!ticketLimiter.check()) {
+      setErr('You have submitted too many tickets. Please wait before submitting another.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from('support_tickets').insert({
@@ -81,7 +90,7 @@ const HelpPage = () => {
       setMessage('');
       setMsg('Issue submitted. Admin will review it.');
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to submit issue.');
+      setErr(sanitizeError(e));
     } finally {
       setSubmitting(false);
     }
@@ -92,7 +101,7 @@ const HelpPage = () => {
     setMsg(null);
     const { error } = await supabase.from('support_tickets').update({ status }).eq('id', id);
     if (error) {
-      setErr(error.message);
+      setErr(sanitizeError(error));
       return;
     }
     setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));

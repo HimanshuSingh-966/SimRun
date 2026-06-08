@@ -4,6 +4,7 @@ import { BookOpen, PlusCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { formatDdMmYyyy } from '../../lib/formatDate';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface CourseRow {
@@ -13,6 +14,7 @@ interface CourseRow {
   department: string | null;
   status: string | null;
   created_at: string | null;
+  faculty_id: string;
   /** Rows in course_materials (files, links, etc.); filled after load. */
   material_count: number;
 }
@@ -42,11 +44,26 @@ const FacultyMyCourses = () => {
 
     (async () => {
       try {
-        const { data, error: qErr } = await supabase
+        // Fetch course IDs where this user is a contributor
+        const { data: contribData } = await supabase
+          .from('course_contributors')
+          .select('course_id')
+          .eq('faculty_id', userId);
+        
+        const contribIds = (contribData || []).map((row) => row.course_id);
+
+        let query = supabase
           .from('courses')
-          .select('id, title, description, department, status, created_at')
-          .eq('faculty_id', userId)
+          .select('id, title, description, department, status, created_at, faculty_id')
           .order('created_at', { ascending: false });
+
+        if (contribIds.length > 0) {
+          query = query.or(`faculty_id.eq.${userId},id.in.(${contribIds.join(',')})`);
+        } else {
+          query = query.eq('faculty_id', userId);
+        }
+
+        const { data, error: qErr } = await query;
 
         if (qErr) throw qErr;
         const rows = (data as Omit<CourseRow, 'material_count'>[]) || [];
@@ -73,8 +90,7 @@ const FacultyMyCourses = () => {
         }
       } catch (e: unknown) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : 'Failed to load courses.';
-          setError(msg);
+          setError(sanitizeError(e));
           setCourses([]);
         }
       } finally {
@@ -148,7 +164,14 @@ const FacultyMyCourses = () => {
                     <BookOpen size={18} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{ fontSize: '1rem', marginBottom: '0.25rem', color: 'var(--color-navy)' }}>{c.title}</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                      <h4 style={{ fontSize: '1rem', margin: 0, color: 'var(--color-navy)' }}>{c.title}</h4>
+                      {c.faculty_id !== userId && (
+                        <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', background: '#dbeafe', color: '#1e40af', borderRadius: '1rem', fontWeight: 600 }}>
+                          Contributor
+                        </span>
+                      )}
+                    </div>
                     {c.description && (
                       <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
                         {c.description}

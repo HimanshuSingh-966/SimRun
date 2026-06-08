@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
+import { ArrowLeft } from 'lucide-react';
+import { sanitizeError } from '../../lib/sanitizeError';
 
 interface Batch {
   id: string;
@@ -11,10 +12,17 @@ interface Batch {
   year: number | null;
 }
 
-const FacultyCreateCourse = () => {
+interface Faculty {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
+const AdminCreateCourse = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [batchSearch, setBatchSearch] = useState('');
   const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
@@ -26,6 +34,7 @@ const FacultyCreateCourse = () => {
     description: '',
     department: '',
     deliveryMode: 'self_paced',
+    faculty_id: '',
     duration: '',
     level: '',
     certificate: '',
@@ -38,16 +47,21 @@ const FacultyCreateCourse = () => {
   });
 
   useEffect(() => {
-    const loadBatches = async () => {
-      const { data, error } = await supabase.from('batches').select('id, name, year').order('name');
-      if (!error && data) setBatches(data as Batch[]);
+    const loadData = async () => {
+      const [batchesRes, facultyRes] = await Promise.all([
+        supabase.from('batches').select('id, name, year').order('name'),
+        supabase.from('profiles').select('id, full_name, email').eq('role', 'faculty').order('full_name')
+      ]);
+      
+      if (!batchesRes.error && batchesRes.data) setBatches(batchesRes.data as Batch[]);
+      if (!facultyRes.error && facultyRes.data) setFaculties(facultyRes.data as Faculty[]);
     };
-    loadBatches();
+    loadData();
   }, []);
 
   const canSubmit = useMemo(
-    () => form.title.trim().length > 0 && selectedBatchIds.length > 0 && !!user,
-    [form.title, selectedBatchIds.length, user]
+    () => form.title.trim().length > 0 && selectedBatchIds.length > 0 && !!user && form.faculty_id.trim().length > 0,
+    [form.title, form.faculty_id, selectedBatchIds.length, user]
   );
 
   const filteredBatches = useMemo(() => {
@@ -97,7 +111,7 @@ const FacultyCreateCourse = () => {
               .map((x) => x.trim())
               .filter(Boolean),
           },
-          faculty_id: user.id,
+          faculty_id: form.faculty_id,
           status: 'draft',
           total_lessons: 0,
         })
@@ -114,7 +128,7 @@ const FacultyCreateCourse = () => {
 
       setMessage('Course created successfully! Redirecting...');
       setTimeout(() => {
-        navigate(`/faculty/my-courses/${data.id}/content`);
+        navigate(`/admin/courses/${data.id}/manage`);
       }, 500);
 } catch (err: unknown) {
     setError(sanitizeError(err));
@@ -125,6 +139,25 @@ const FacultyCreateCourse = () => {
 
   return (
     <div className={styles.dashboardWrapper}>
+      <button
+        type="button"
+        onClick={() => navigate('/admin/courses')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          background: 'none',
+          border: 'none',
+          color: 'var(--theme-primary)',
+          fontWeight: 600,
+          cursor: 'pointer',
+          marginBottom: '1rem',
+          padding: 0,
+        }}
+      >
+        <ArrowLeft size={18} /> Back to Courses
+      </button>
+
       <div className={styles.approvalsCard}>
         <div className={styles.approvalsHeader}>
           <h3>Create Course</h3>
@@ -149,6 +182,17 @@ const FacultyCreateCourse = () => {
             placeholder="Department (optional)"
             style={{ padding: '0.75rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}
           />
+
+          <select
+            value={form.faculty_id}
+            onChange={(e) => setForm((prev) => ({ ...prev, faculty_id: e.target.value }))}
+            style={{ padding: '0.75rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}
+          >
+            <option value="" disabled>Select Main Faculty</option>
+            {faculties.map((fac) => (
+              <option key={fac.id} value={fac.id}>{fac.full_name} ({fac.email})</option>
+            ))}
+          </select>
 
           <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', display: 'grid', gap: '0.75rem' }}>
             <p style={{ fontWeight: 700 }}>Course Overview Details</p>
@@ -257,4 +301,4 @@ const FacultyCreateCourse = () => {
   );
 };
 
-export default FacultyCreateCourse;
+export default AdminCreateCourse;

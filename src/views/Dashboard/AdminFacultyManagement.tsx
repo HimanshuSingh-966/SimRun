@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface FacultyProfileRow {
@@ -30,18 +31,18 @@ const AdminFacultyManagement = () => {
           .order('created_at', { ascending: false });
         if (qErr) throw qErr;
 
-        const mapped = ((data as any[]) || []).map((row) => ({
-          id: row.id,
-          full_name: row.full_name,
-          email: row.email,
-          status: row.status,
-          employee_id: row.faculty_profiles?.employee_id || null,
-          department: row.faculty_profiles?.department || null,
-          designation: row.faculty_profiles?.designation || null,
-        })) as FacultyProfileRow[];
+    const mapped = ((data as unknown as { id: string; full_name: string; email: string; status: string; faculty_profiles: { employee_id?: string; department?: string; designation?: string }[] }[]) || []).map((row) => ({
+      id: row.id,
+      full_name: row.full_name,
+      email: row.email,
+      status: row.status,
+      employee_id: row.faculty_profiles?.[0]?.employee_id || null,
+      department: row.faculty_profiles?.[0]?.department || null,
+      designation: row.faculty_profiles?.[0]?.designation || null,
+    })) as FacultyProfileRow[];
         if (!cancelled) setRows(mapped);
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load faculty.');
+        if (!cancelled) setError(sanitizeError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }

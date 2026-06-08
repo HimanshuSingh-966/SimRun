@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface EnrollmentRow {
@@ -86,7 +87,7 @@ const FacultyEnrollments = () => {
         if (studentIds.length > 0) {
           const [{ data: profiles, error: pErr }, { data: sProfiles, error: spErr }] = await Promise.all([
             supabase.from('profiles').select('id, full_name, email').in('id', studentIds),
-            supabase.from('student_profiles').select('*').in('id', studentIds),
+            supabase.from('student_profiles').select('id, reg_number, full_name, name, student_name').in('id', studentIds),
           ]);
           if (pErr) throw pErr;
           if (spErr) throw spErr;
@@ -116,7 +117,7 @@ const FacultyEnrollments = () => {
         if (!cancelled) setRows(enriched);
       } catch (err: unknown) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load enrollments.');
+          setError(sanitizeError(err));
           setRows([]);
         }
       } finally {

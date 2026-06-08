@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface CourseRow {
@@ -103,7 +104,7 @@ const FacultyCourseProgress = () => {
         if (studentIds.length > 0) {
           const [{ data: profileData, error: pErr }, { data: spData, error: spErr }] = await Promise.all([
             supabase.from('profiles').select('id, full_name, email').in('id', studentIds),
-            supabase.from('student_profiles').select('*').in('id', studentIds),
+            supabase.from('student_profiles').select('id, reg_number, full_name, name, student_name').in('id', studentIds),
           ]);
           if (pErr) throw pErr;
           if (spErr) throw spErr;
@@ -149,7 +150,7 @@ const FacultyCourseProgress = () => {
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load course progress.');
+          setError(sanitizeError(err));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -179,7 +180,7 @@ const FacultyCourseProgress = () => {
 
         const { data, error: sErr } = await supabase
           .from('submissions')
-          .select('*')
+          .select('id, assignment_id, status, submitted_at')
           .eq('student_id', selectedStudentId)
           .in('assignment_id', assignmentIds);
         if (sErr) throw sErr;
@@ -194,7 +195,7 @@ const FacultyCourseProgress = () => {
 
         if (!cancelled) setAssignmentStatus((prev) => ({ ...prev, [key]: merged }));
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load assignment status.');
+        if (!cancelled) setError(sanitizeError(err));
       } finally {
         if (!cancelled) setLoadingAssignments(false);
       }

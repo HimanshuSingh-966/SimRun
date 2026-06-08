@@ -56,21 +56,21 @@ const AdminOverview = () => {
           .limit(5);
         if (enrollErr) throw enrollErr;
 
-        const studentIds = [...new Set(((enrollmentRows as any[]) || []).map((r) => r.student_id).filter(Boolean))];
-        const courseIds = [...new Set(((enrollmentRows as any[]) || []).map((r) => r.course_id).filter(Boolean))];
+      const studentIds = [...new Set(((enrollmentRows as { student_id: string }[]) || []).map((r) => r.student_id).filter(Boolean))];
+      const courseIds = [...new Set(((enrollmentRows as { course_id: string }[]) || []).map((r) => r.course_id).filter(Boolean))];
 
-        const [{ data: students }, { data: courses }] = await Promise.all([
-          studentIds.length
-            ? supabase.from('profiles').select('id, full_name, email').in('id', studentIds)
-            : Promise.resolve({ data: [] as any[] }),
-          courseIds.length
-            ? supabase.from('courses').select('id, title').in('id', courseIds)
-            : Promise.resolve({ data: [] as any[] }),
-        ]);
+      const [{ data: students }, { data: courses }] = await Promise.all([
+        studentIds.length
+        ? supabase.from('profiles').select('id, full_name, email').in('id', studentIds)
+        : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+        courseIds.length
+        ? supabase.from('courses').select('id, title').in('id', courseIds)
+        : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ]);
 
-        const studentById = new Map(((students as any[]) || []).map((s) => [s.id, s]));
-        const courseById = new Map(((courses as any[]) || []).map((c) => [c.id, c]));
-        const activityRows: ActivityRow[] = ((enrollmentRows as any[]) || []).map((row) => {
+      const studentById = new Map(((students as { id: string; full_name: string | null; email: string | null }[]) || []).map((s) => [s.id, s]));
+      const courseById = new Map(((courses as { id: string; title: string }[]) || []).map((c) => [c.id, c]));
+      const activityRows: ActivityRow[] = ((enrollmentRows as { id: string; student_id: string; course_id: string; enrolled_at: string | null; progress: number; status: string }[]) || []).map((row) => {
           const s = studentById.get(row.student_id);
           const c = courseById.get(row.course_id);
           const fallbackName = s?.email ? String(s.email).split('@')[0] : `Student ${String(row.student_id).slice(0, 8)}`;
@@ -86,7 +86,7 @@ const AdminOverview = () => {
         });
         setActivities(activityRows);
       } catch (error) {
-        console.error('Error loading admin dashboard:', error);
+        if (process.env.NODE_ENV !== 'production') console.error('Error loading admin dashboard:', error);
       } finally {
         setLoading(false);
       }
@@ -145,53 +145,55 @@ const AdminOverview = () => {
             <button className={styles.downloadBtn}>Download Report</button>
           </div>
           
-          <table className={styles.activityTable}>
-            <thead>
-              <tr>
-                <th>STUDENT</th>
-                <th>COURSE</th>
-                <th>ENROLLED</th>
-                <th>PERFORMANCE</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activities.length > 0 ? activities.map(act => (
-                <tr key={act.id}>
-                  <td>
-                    <div className={styles.studentCell}>
-                      <div className={styles.tableAvatar}></div>
-                      <div className={styles.studentDetails}>
-                        <span className={styles.studentName}>{act.student}</span>
-                        <span className={styles.studentEmail}>{act.email}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{act.course}</td>
-                  <td>{act.enrolledAt ? new Date(act.enrolledAt).toLocaleString() : '—'}</td>
-                  <td>
-                    <div className={styles.performanceWrap}>
-                      <div className={styles.progressBar}>
-                        <div className={styles.progressFill} style={{width: `${act.performance}%`}}></div>
-                      </div>
-                      <span>{act.performance}%</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`${styles.statusBadge} ${act.status === 'ACTIVE' ? styles.statusActive : styles.statusPending}`}>
-                      {act.status}
-                    </span>
-                  </td>
-                </tr>
-              )) : (
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className={styles.activityTable}>
+              <thead>
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
-                    No recent enrollment activity
-                  </td>
+                  <th>STUDENT</th>
+                  <th>COURSE</th>
+                  <th>ENROLLED</th>
+                  <th>PERFORMANCE</th>
+                  <th>STATUS</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activities.length > 0 ? activities.map(act => (
+                  <tr key={act.id}>
+                    <td>
+                      <div className={styles.studentCell}>
+                        <div className={styles.tableAvatar}></div>
+                        <div className={styles.studentDetails}>
+                          <span className={styles.studentName}>{act.student}</span>
+                          <span className={styles.studentEmail}>{act.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{act.course}</td>
+                    <td>{act.enrolledAt ? new Date(act.enrolledAt).toLocaleString() : '—'}</td>
+                    <td>
+                      <div className={styles.performanceWrap}>
+                        <div className={styles.progressBar}>
+                          <div className={styles.progressFill} style={{width: `${act.performance}%`}}></div>
+                        </div>
+                        <span>{act.performance}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`${styles.statusBadge} ${act.status === 'ACTIVE' ? styles.statusActive : styles.statusPending}`}>
+                        {act.status}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
+                      No recent enrollment activity
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
   );

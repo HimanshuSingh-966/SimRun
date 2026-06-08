@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { X, Plus } from 'lucide-react';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface BatchRow {
@@ -68,8 +69,9 @@ const AdminStudentManagement = () => {
           supabase
             .from('profiles')
             .select('id, full_name, email, status, student_profiles(reg_number, batch_id, semester)')
-            .eq('role', 'student')
-            .order('created_at', { ascending: false }),
+        .eq('role', 'student')
+        .order('created_at', { ascending: false })
+        .limit(500),
         ]);
         if (bErr) throw bErr;
         if (sErr) throw sErr;
@@ -78,7 +80,7 @@ const AdminStudentManagement = () => {
           setRows((studentData as StudentRow[]) || []);
         }
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load students.');
+        if (!cancelled) setError(sanitizeError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,7 +129,7 @@ const AdminStudentManagement = () => {
       setStartYear(new Date().getFullYear().toString());
       setEndYear((new Date().getFullYear() + 1).toString());
     } catch (err: unknown) {
-      setModalError(err instanceof Error ? err.message : 'Failed to create batch.');
+      setModalError(sanitizeError(err));
     } finally {
       setCreating(false);
     }

@@ -4,6 +4,7 @@ import { ArrowLeft, ClipboardList, FileText } from 'lucide-react';
 import CourseMaterialAttachment from '../../components/CourseMaterialAttachment';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface MaterialRow {
@@ -28,16 +29,7 @@ interface AssignmentRow {
   due_date: string | null;
 }
 
-const groupByWeek = <T extends { week_number: number }>(items: T[]) => {
-  const grouped = new Map<number, T[]>();
-  items.forEach((item) => {
-    const key = item.week_number || 1;
-    const arr = grouped.get(key) || [];
-    arr.push(item);
-    grouped.set(key, arr);
-  });
-  return Array.from(grouped.entries()).sort((a, b) => a[0] - b[0]);
-};
+import groupByWeek from '../../lib/groupByWeek';
 
 const AdminCoursePreview = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -66,7 +58,7 @@ const AdminCoursePreview = () => {
         if (cErr) throw cErr;
 
         const [{ data: mat }, { data: asg }] = await Promise.all([
-          supabase.from('course_materials').select('*').eq('course_id', courseId).order('week_number', { ascending: true }).order('sort_order', { ascending: true }),
+          supabase.from('course_materials').select('id, week_number, title, material_type, description, content, markdown_content, file_url, file_name, file_mime_type, external_url, sort_order').eq('course_id', courseId).order('week_number', { ascending: true }).order('sort_order', { ascending: true }),
           supabase.from('assignments').select('id, week_number, title, description, due_date').eq('course_id', courseId).order('week_number', { ascending: true }).order('created_at', { ascending: false }),
         ]);
 
@@ -76,7 +68,7 @@ const AdminCoursePreview = () => {
           setAssignments((asg as AssignmentRow[]) || []);
         }
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load.');
+        if (!cancelled) setError(sanitizeError(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -165,7 +157,7 @@ const AdminCoursePreview = () => {
         <div className={styles.approvalsHeader}>
           <h3>
             <ClipboardList size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            Assignments
+            Assessment
           </h3>
         </div>
         {assignments.length === 0 ? (

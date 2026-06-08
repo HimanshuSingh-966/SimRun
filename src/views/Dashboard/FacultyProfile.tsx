@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { sanitizeError } from '../../lib/sanitizeError';
 import styles from './Admin.module.css';
 
 interface FacultyProfileRow {
@@ -43,13 +44,13 @@ const FacultyProfile = () => {
     (async () => {
       const { data, error: fpErr } = await supabase
         .from('faculty_profiles')
-        .select('*')
+        .select('id, department, designation, employee_id')
         .eq('id', user.id)
         .maybeSingle();
 
       if (cancelled) return;
       if (fpErr) {
-        setError(fpErr.message);
+        setError(sanitizeError(fpErr));
       } else {
         const fp = (data as FacultyProfileRow | null) || null;
         setDepartment(fp?.department || '');
@@ -62,6 +63,7 @@ const FacultyProfile = () => {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, profile?.full_name, user?.id]);
 
   const uploadAvatar = async (file: File) => {
@@ -71,12 +73,20 @@ const FacultyProfile = () => {
     setMsg(null);
 
     try {
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedMimes.includes(file.type)) {
+        throw new Error('Please upload a valid image file (JPG, PNG, GIF, WebP).');
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('Image size must be less than 2MB.');
+      }
+
       const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
       const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `faculty-avatars/${user.id}/${Date.now()}_${safe}.${ext}`;
+      const path = `${user.id}/${Date.now()}_${safe}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('course-material-files')
+        .from('avatars')
         .upload(path, file, {
           cacheControl: '3600',
           upsert: false,
@@ -84,7 +94,7 @@ const FacultyProfile = () => {
         });
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from('course-material-files').getPublicUrl(path);
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const publicUrl = data.publicUrl;
 
       const { error: profileErr } = await supabase
@@ -96,7 +106,7 @@ const FacultyProfile = () => {
       setAvatarUrl(publicUrl);
       setMsg('Profile image updated.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image.');
+      setError(sanitizeError(err));
     } finally {
       setUploadingAvatar(false);
     }
@@ -129,7 +139,7 @@ const FacultyProfile = () => {
 
       setMsg('Profile updated successfully.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile.');
+      setError(sanitizeError(err));
     } finally {
       setSaving(false);
     }
@@ -157,7 +167,7 @@ const FacultyProfile = () => {
       setConfirmPassword('');
       setMsg('Password changed successfully.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to change password.');
+      setError(sanitizeError(err));
     } finally {
       setUpdatingPassword(false);
     }
@@ -195,7 +205,7 @@ const FacultyProfile = () => {
                   Upload profile image
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg, image/png, image/webp, image/gif"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) void uploadAvatar(file);

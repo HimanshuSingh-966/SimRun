@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, PlusCircle, BookOpen, Users, ClipboardList, FileText, Settings, LogOut, Menu, X, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import isActiveNav from '../../lib/isActiveNav';
 import AppBrand from '../../components/AppBrand';
 import DashboardSearch from '../../components/DashboardSearch';
 import NotificationBell from '../../components/NotificationBell';
@@ -18,19 +19,25 @@ const FacultyLayout = () => {
   const [designation, setDesignation] = useState('Faculty');
 
   useEffect(() => {
+    let cancelled = false;
     const loadDesignation = async () => {
       if (!user) return;
-      const { data } = await supabase
-        .from('faculty_profiles')
-        .select('designation')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (data?.designation) {
-        setDesignation(data.designation);
+      try {
+        const { data } = await supabase
+          .from('faculty_profiles')
+          .select('designation')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!cancelled && data?.designation) {
+          setDesignation(data.designation);
+        }
+      } catch {
+        // keep default designation
       }
     };
 
     loadDesignation();
+    return () => { cancelled = true; };
   }, [user]);
 
   const navItems = [
@@ -39,20 +46,15 @@ const FacultyLayout = () => {
     { path: '/faculty/my-courses', icon: <BookOpen size={18} />, label: 'My Courses' },
     { path: '/faculty/enrollments', icon: <Users size={18} />, label: 'Student Enrollments' },
     { path: '/faculty/progress', icon: <ClipboardList size={18} />, label: 'Student Progress' },
-    { path: '/faculty/assignments', icon: <FileText size={18} />, label: 'Assignments' },
+    { path: '/faculty/assignments', icon: <FileText size={18} />, label: 'Assessment' },
   ];
 
-  const isActiveNav = (itemPath: string) => {
-    if (location.pathname === itemPath) return true;
-    if (itemPath === '/faculty') return false;
-    return location.pathname.startsWith(`${itemPath}/`);
-  };
+  const checkActive = (itemPath: string) => isActiveNav('/faculty', itemPath, location.pathname);
 
   return (
     <div
       className={styles.adminContainer}
-      data-theme="faculty"
-      style={{ ['--color-border' as any]: '#000000' }}
+		data-theme="faculty"
     >
         {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
@@ -70,7 +72,7 @@ const FacultyLayout = () => {
             >
               {isSidebarCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
             </button>
-            <button className={styles.mobileCloseBtn} onClick={() => setIsSidebarOpen(false)}>
+            <button className={styles.mobileCloseBtn} onClick={() => setIsSidebarOpen(false)} aria-label="Close sidebar">
               <X size={20} />
             </button>
           </div>
@@ -80,7 +82,7 @@ const FacultyLayout = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`${styles.navItem} ${isActiveNav(item.path) ? styles.active : ''}`}
+              className={`${styles.navItem} ${checkActive(item.path) ? styles.active : ''}`}
               onClick={() => setIsSidebarOpen(false)}
             >
               {item.icon}
@@ -96,7 +98,7 @@ const FacultyLayout = () => {
               <span className={styles.userName}>{profile?.full_name || 'Faculty Member'}</span>
               <span className={styles.userRole}>{designation}</span>
             </div>
-            <button className={styles.logoutBtn} onClick={signOut} title="Log out">
+            <button className={styles.logoutBtn} onClick={signOut} title="Log out" aria-label="Log out">
               <LogOut size={16} />
             </button>
           </div>
